@@ -1,0 +1,14 @@
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowUpRight, Fingerprint, ShieldAlert } from 'lucide-react'
+import api, { errorText } from '../api.js'
+import { Shell, Eyebrow, LoadingPanel, Notice } from '../components/Shell.jsx'
+import { SuspectCard } from '../components/CaseComponents.jsx'
+
+export default function Accusation(){const {id}=useParams(),navigate=useNavigate(),[item,setItem]=useState(null),[selected,setSelected]=useState(''),[confirm,setConfirm]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('')
+ useEffect(()=>{api.get(`/cases/${id}`).then(({data})=>setItem(data.case)).catch(e=>setError(errorText(e)))},[id])
+ async function submit(){if(!selected)return;setBusy(true);setError('');try{await api.post(`/cases/${id}/accuse`,{suspectId:selected});navigate(`/case/${id}/result`)}catch(e){setError(errorText(e));setBusy(false)}}
+ if(busy)return <main className="center-page"><LoadingPanel title="Sealing the case" text="Your accusation is being reviewed."/></main>
+ if(!item)return <main className="center-page"><Notice>{error||'Retrieving the case file…'}</Notice></main>
+ return <Shell><main className="accusation-page"><div className="breadcrumb"><Link to={`/case/${id}`}><ArrowLeft size={14}/> Return to investigation</Link><span>FINAL STATEMENT <i>/</i> FILE N° {id.slice(-6).toUpperCase()}</span></div><div className="accusation-wrap"><div className="accuse-title"><div className="accuse-seal"><Fingerprint size={30}/></div><Eyebrow>THE FINAL STATEMENT</Eyebrow><h1>Who committed<br/>the crime?</h1><p>Every detail has led you here. Take a moment to consider the evidence before you name your suspect.</p></div><Notice>{error}</Notice><div className="accuse-list">{item.suspects.map(s=><SuspectCard key={s.id} suspect={s} selected={selected===s.id} onClick={()=>setSelected(s.id)}/>)}</div><div className="accuse-warning"><ShieldAlert size={17}/><span><b>This decision closes the investigation.</b><small>Your evidence and hints will be tallied when the accusation is submitted.</small></span></div>{!confirm?<button className="button button-primary accuse-submit" disabled={!selected} onClick={()=>setConfirm(true)}>Continue to confirmation <ArrowUpRight size={16}/></button>:<div className="confirmation"><div><span className="brief-label">CONFIRM YOUR ACCUSATION</span><h2>You are naming <em>{item.suspects.find(s=>s.id===selected)?.name}</em>.</h2><p>This cannot be changed once the case is closed.</p></div><div className="confirm-actions"><button className="button button-quiet" onClick={()=>setConfirm(false)}>Go back</button><button className="button button-danger" onClick={submit}>Submit accusation <ArrowUpRight size={15}/></button></div></div>}<Link to={`/case/${id}`} className="back-to-evidence"><ArrowLeft size={13}/> I want to review the evidence again</Link></div></main></Shell>
+}
